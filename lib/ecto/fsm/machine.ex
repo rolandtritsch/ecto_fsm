@@ -14,13 +14,13 @@ defmodule Ecto.FSM.Machine do
   apply state_name change. Then use `Ecto.FSM.Machine.event/2` in order
   to execute transition.
 
-      iex> defmodule Door1 do
-      ...>   use Ecto.FSM
+      iex> defmodule Elixir.Door1 do
+      ...>   use Ecto.FSM.Notation
       ...>   transition closed({:open_door, _}, s), do: {:next_state, :opened, s}
       ...> end
       ...>
-      ...> defmodule Door2 do
-      ...>   use Ecto.FSM
+      ...> defmodule Elixir.Door2 do
+      ...>   use Ecto.FSM.Notation
       ...>
       ...>   @doc "allow multiple closes"
       ...>   bypass close_door(_, s), do: {:keep_state, Map.put(s, :doubleclosed, true)}
@@ -36,7 +36,7 @@ defmodule Ecto.FSM.Machine do
       }
       iex> Ecto.FSM.Machine.event_bypasses([Door1, Door2])
       %{close_door: Door2}
-      iex> defmodule DoorState do
+      iex> defmodule Elixir.DoorState do
       ...>   defstruct(handlers: [Door1, Door2], state: nil, doubleclosed: false)
       ...> end
       ...>

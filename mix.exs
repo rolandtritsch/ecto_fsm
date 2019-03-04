@@ -12,6 +12,7 @@ defmodule EctoFsm.MixProject do
       source_url: "https://github.com/tableturn/ecto_fsm",
       dialyzer: dialyzer(System.get_env("MIX_CACHE_PLT")),
       docs: [],
+      consolidate_protocols: Mix.env() != :test,
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: cli_env_for(:test, ~w(
             coveralls coveralls.detail coveralls.html coveralls.json coveralls.post

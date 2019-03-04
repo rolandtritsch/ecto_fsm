@@ -1,6 +1,6 @@
 defprotocol Ecto.FSM.Machine.State do
   @moduledoc """
-  Describes meta FSM state types
+  Defines a protocol for get / set state name from a structure.
   """
   @type name :: Ecto.FSM.State.name()
 
