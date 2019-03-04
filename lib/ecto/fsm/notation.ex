@@ -112,12 +112,21 @@ defmodule Ecto.FSM.Notation do
   ```
   """
   defmacro transition({state, _meta, [{trans, _params} | _rest]} = signature, body_block) do
+    do_block = Keyword.get(body_block, :do)
+
+    transition =
+      case trans do
+        {:_, _, _} -> :_
+        t when is_atom(t) -> t
+      end
+
     quote do
-      @fsm Map.put(
-             @fsm,
-             {unquote(state), unquote(trans)},
-             {__MODULE__, @to || unquote(Enum.uniq(find_nextstates(body_block[:do])))}
-           )
+      state = unquote(state)
+      trans = unquote(transition)
+      next_states = unquote(do_block |> find_nextstates() |> Enum.uniq())
+
+      @fsm Map.put(@fsm, {state, trans}, {__MODULE__, @to || next_states})
+
       doc =
         __MODULE__
         |> Module.get_attribute(:doc)
@@ -127,8 +136,8 @@ defmodule Ecto.FSM.Notation do
           doc when is_binary(doc) -> doc
         end
 
-      @docs Map.put(@docs, {:transition_doc, unquote(state), unquote(trans)}, doc)
-      def unquote(signature), do: unquote(body_block[:do])
+      @docs Map.put(@docs, {:transition_doc, state, trans}, doc)
+      def unquote(signature), do: unquote(do_block)
       @to nil
     end
   end
