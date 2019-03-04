@@ -86,6 +86,10 @@ defmodule Ecto.FSM.MachineTest do
       assert match?(true, Machine.action_available?(s, :lock))
       assert match?(false, Machine.action_available?(s, :unknown))
     end
+
+    test ".event/2", %{locker: s} do
+      assert match?({:next_state, %Locker{status: :one}}, Machine.event(s, {:one, nil}))
+    end
   end
 
   defp new_locker(_ctx) do

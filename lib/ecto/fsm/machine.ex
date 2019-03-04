@@ -13,8 +13,7 @@ defmodule Ecto.FSM.Machine do
 
   @type meta_event_error :: :illegal_action | term
   @type meta_event_reply ::
-          {:next_state, State.t()}
-          | {:next_state, State.t(), timeout :: integer}
+          {:next_state, State.name(), State.t()}
           | {:keep_state, State.t()}
           | {:error, meta_event_error}
 
