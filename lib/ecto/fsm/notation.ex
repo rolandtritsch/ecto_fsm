@@ -8,6 +8,8 @@ defmodule Ecto.FSM.Notation do
   * `fsm() :: Ecto.FSM.specs()`
   * `docs() :: Ecto.FSM.docs()`
 
+  Transition functions must return `Ecto.FSM.transition_ret`.
+
   Examples:
 
       iex> defmodule Elixir.Door do
@@ -120,12 +122,17 @@ defmodule Ecto.FSM.Notation do
         t when is_atom(t) -> t
       end
 
-    quote do
-      state = unquote(state)
-      trans = unquote(transition)
-      next_states = unquote(do_block |> find_nextstates() |> Enum.uniq())
+    next_states =
+      do_block
+      |> find_nextstates(state)
+      |> Enum.uniq()
 
-      @fsm Map.put(@fsm, {state, trans}, {__MODULE__, @to || next_states})
+    quote do
+      state_name = unquote(state)
+      trans = unquote(transition)
+      next_states = @to || unquote(next_states)
+
+      @fsm Map.put(@fsm, {state_name, trans}, {__MODULE__, next_states})
 
       doc =
         __MODULE__
@@ -136,7 +143,7 @@ defmodule Ecto.FSM.Notation do
           doc when is_binary(doc) -> doc
         end
 
-      @docs Map.put(@docs, {:transition_doc, state, trans}, doc)
+      @docs Map.put(@docs, {:transition_doc, state_name, trans}, doc)
       def unquote(signature), do: unquote(do_block)
       @to nil
     end
@@ -165,9 +172,22 @@ defmodule Ecto.FSM.Notation do
   ###
   ### Priv
   ###
-  defp find_nextstates({:{}, _, [:next_state, state | _]}) when is_atom(state), do: [state]
-  defp find_nextstates({_, _, asts}), do: find_nextstates(asts)
-  defp find_nextstates({_, asts}), do: find_nextstates(asts)
-  defp find_nextstates(asts) when is_list(asts), do: Enum.flat_map(asts, &find_nextstates/1)
-  defp find_nextstates(_), do: []
+  defp find_nextstates({:keep_state, _state_ast}, state_name),
+    do: [state_name]
+
+  defp find_nextstates({:{}, _, [:next_state, state_name, _state_ast]}, _)
+       when is_atom(state_name),
+       do: [state_name]
+
+  defp find_nextstates({_, _, asts}, state_name),
+    do: find_nextstates(asts, state_name)
+
+  defp find_nextstates({_, asts}, state_name),
+    do: find_nextstates(asts, state_name)
+
+  defp find_nextstates(asts, state_name) when is_list(asts),
+    do: Enum.flat_map(asts, fn ast -> find_nextstates(ast, state_name) end)
+
+  defp find_nextstates(_, _),
+    do: []
 end

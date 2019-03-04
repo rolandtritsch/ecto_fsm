@@ -8,56 +8,6 @@ defmodule Ecto.FSM.Machine do
     handlers (see `Ecto.FSM` to see how to define one).
   * `Ecto.FSM.Machine.event/2` allows you to execute the correct
     handler from a state and action
-
-  Define a structure implementing `Ecto.FSM.Machine.State` in order to
-  define how to extract handlers and state_name from state, and how to
-  apply state_name change. Then use `Ecto.FSM.Machine.event/2` in order
-  to execute transition.
-
-      iex> defmodule Elixir.Door1 do
-      ...>   use Ecto.FSM.Notation
-      ...>   transition closed({:open_door, _}, s), do: {:next_state, :opened, s}
-      ...> end
-      ...>
-      ...> defmodule Elixir.Door2 do
-      ...>   use Ecto.FSM.Notation
-      ...>
-      ...>   @doc "allow multiple closes"
-      ...>   bypass close_door(_, s), do: {:keep_state, Map.put(s, :doubleclosed, true)}
-      ...>
-      ...>   @doc "standard door open"
-      ...>   transition opened({:close_door, _}, s), do: {:next_state, :closed, s}
-      ...> end
-      ...>
-      ...> Ecto.FSM.Machine.fsm([Door1, Door2])
-      %{
-        {:closed, :open_door} => {Door1, [:opened]},
-        {:opened, :close_door} => {Door2, [:closed]}
-      }
-      iex> Ecto.FSM.Machine.event_bypasses([Door1, Door2])
-      %{close_door: Door2}
-      iex> defmodule Elixir.DoorState do
-      ...>   defstruct(handlers: [Door1, Door2], state: nil, doubleclosed: false)
-      ...> end
-      ...>
-      ...> defimpl Ecto.FSM.Machine.State, for: DoorState do
-      ...>   def handlers(d), do: d.handlers
-      ...>
-      ...>   def state_name(d), do: d.state
-      ...>
-      ...>   def set_state_name(d, name), do: %{d | state: name}
-      ...> end
-      ...>
-      ...> struct(DoorState, state: :closed) |> Ecto.FSM.Machine.event({:open_door, nil})
-      {:next_state, %{__struct__: DoorState, handlers: [Door1, Door2], state: :opened, doubleclosed: false}}
-      ...> struct(DoorState, state: :closed) |> Ecto.FSM.Machine.event({:close_door, nil})
-      {:next_state, %{__struct__: DoorState, handlers: [Door1, Door2], state: :closed, doubleclosed: true}}
-      iex> Ecto.FSM.Machine.find_info(struct(DoorState, state: :opened), :close_door)
-      {:known_transition, "standard door open"}
-      iex> Ecto.FSM.Machine.find_info(struct(DoorState, state: :closed), :close_door)
-      {:bypass, "allow multiple closes"}
-      iex> Ecto.FSM.Machine.available_actions(struct(DoorState, state: :closed))
-      [:open_door, :close_door]
   """
   alias Ecto.FSM.Machine.State
 
@@ -71,73 +21,40 @@ defmodule Ecto.FSM.Machine do
   @doc """
   Returns `Ecto.FSM.specs()` built from all handlers
   """
-  @spec fsm([Ecto.FSM.handler()] | State.t()) :: Ecto.FSM.specs()
-  def fsm(handlers) when is_list(handlers) do
-    handlers
-    |> Enum.map(& &1.fsm)
-    |> Enum.concat()
-    |> Enum.into(%{})
-  end
-
-  def fsm(state), do: fsm(State.handlers(state))
+  @spec fsm(State.t()) :: Ecto.FSM.specs()
+  def fsm(state), do: do_fsm(State.handlers(state))
 
   @doc """
   Returns global bypasses
   """
-  @spec event_bypasses([Ecto.FSM.handler()] | State.t()) :: Ecto.FSM.bypasses()
-  def event_bypasses(handlers) when is_list(handlers),
-    do: handlers |> Enum.map(& &1.event_bypasses) |> Enum.concat() |> Enum.into(%{})
-
-  def event_bypasses(state), do: event_bypasses(State.handlers(state))
+  @spec event_bypasses(State.t()) :: Ecto.FSM.bypasses()
+  def event_bypasses(state), do: do_event_bypasses(State.handlers(state))
 
   @doc """
   Returns handler for given action, if any
   """
-  @spec find_handler(Ecto.FSM.action(), [Ecto.FSM.handler()]) :: Ecto.FSM.handler() | nil
-  def find_handler({state_name, trans}, handlers) when is_list(handlers) do
-    handlers
-    |> fsm()
-    |> Map.get({state_name, trans})
-    |> case do
-      {handler, _} -> handler
-      _ -> nil
-    end
-  end
-
-  @doc """
-  Same as `find_handler/2` but using a 'meta' state implementing
-  `Ecto.FSM.Machine.State`
-  """
-  @spec find_handler({[Ecto.FSM.handler()], Ecto.FSM.trans()}) :: Ecto.FSM.handler() | nil
+  @spec find_handler({State.t(), Ecto.FSM.trans()}) :: Ecto.FSM.handler() | nil
   def find_handler({state, trans}) do
     {State.state_name(state), trans}
-    |> find_handler(State.handlers(state))
+    |> do_find_handler(State.handlers(state))
   end
 
   @doc """
   Find bypass
   """
-  @spec find_bypass([Ecto.FSM.handler()] | Ecto.FSM.state(), Ecto.FSM.trans()) ::
-          Ecto.FSM.handler() | nil
-  def find_bypass(handlers_or_state, trans) do
-    event_bypasses(handlers_or_state)[trans]
+  @spec find_bypass_handler(State.t(), Ecto.FSM.trans()) :: Ecto.FSM.handler() | nil
+  def find_bypass_handler(state, trans) do
+    event_bypasses(state)[trans]
   end
 
   @doc """
   Returns global doc
   """
-  @spec infos([Ecto.FSM.handler()] | Ecto.FSM.state(), Ecto.FSM.trans()) :: Ecto.FSM.docs()
-  def infos(handlers, _trans) when is_list(handlers) do
-    handlers
-    |> Enum.map(& &1.docs)
-    |> Enum.concat()
-    |> Enum.into(%{})
-  end
-
+  @spec infos(State.t(), Ecto.FSM.trans()) :: Ecto.FSM.docs()
   def infos(state, action) do
     state
     |> State.handlers()
-    |> infos(action)
+    |> do_infos(action)
   end
 
   @doc """
@@ -154,24 +71,7 @@ defmodule Ecto.FSM.Machine do
         find_bypass_info(docs, trans)
 
       doc ->
-        {:known_transition, doc}
-    end
-  end
-
-  @doc """
-  Meta application of the transition function, using `find_handler/2`
-  to find the module implementing it.
-  """
-  @spec event(State.t(), {Ecto.FSM.trans(), term}) :: meta_event_reply
-  def event(state, {trans, params}) do
-    {state, trans}
-    |> find_handler()
-    |> case do
-      nil ->
-        do_find_bypass(state, trans, params)
-
-      handler ->
-        do_apply_event(handler, state, trans, params)
+        {:transition, doc}
     end
   end
 
@@ -199,21 +99,71 @@ defmodule Ecto.FSM.Machine do
   """
   @spec action_available?(State.t(), Ecto.FSM.trans()) :: boolean
   def action_available?(state, action) do
-    action in available_actions(state)
+    actions = available_actions(state)
+
+    if :_ in actions do
+      true
+    else
+      action in available_actions(state)
+    end
+  end
+
+  @doc """
+  Meta application of the transition function, using `find_handler/2`
+  to find the module implementing it.
+  """
+  @spec event(State.t(), {Ecto.FSM.trans(), term}) :: meta_event_reply
+  def event(state, {trans, params}) do
+    {state, trans}
+    |> find_handler()
+    |> case do
+      nil ->
+        do_find_bypass(state, trans, params)
+
+      handler ->
+        do_apply_event(handler, state, trans, params)
+    end
   end
 
   ###
   ### Priv
   ###
-  defp do_find_bypass(state, action, params) do
+  defp do_fsm(handlers) when is_list(handlers) do
+    handlers
+    |> Enum.map(& &1.fsm)
+    |> Enum.concat()
+    |> Enum.into(%{})
+  end
+
+  defp do_event_bypasses(handlers) when is_list(handlers),
+    do: handlers |> Enum.map(& &1.event_bypasses) |> Enum.concat() |> Enum.into(%{})
+
+  defp do_infos(handlers, _trans) when is_list(handlers) do
+    handlers
+    |> Enum.map(& &1.docs)
+    |> Enum.concat()
+    |> Enum.into(%{})
+  end
+
+  defp do_find_bypass(state, trans, params) do
     state
-    |> find_bypass(action)
+    |> find_bypass_handler(trans)
     |> case do
       nil ->
         {:error, :illegal_action}
 
       handler ->
-        do_apply_bypass(handler, state, action, params)
+        do_apply_bypass(handler, state, trans, params)
+    end
+  end
+
+  defp do_find_handler({state_name, trans}, handlers) when is_list(handlers) do
+    handlers
+    |> do_fsm()
+    |> Map.get({state_name, trans})
+    |> case do
+      {handler, _} -> handler
+      _ -> nil
     end
   end
 

@@ -22,9 +22,10 @@ defmodule Ecto.FSM do
   @type doc_key :: {:transition_doc, State.name(), trans} | {:event_doc, trans}
   @type doc :: String.t()
   @type docs :: %{doc_key => doc}
-  @type info :: {:known_transition, doc} | {:bypass, doc}
+  @type info :: {:transition, doc} | {:bypass, doc}
 
-  @type transition :: ({trans, params}, State.t() -> {:next_state, trans, State.t()})
+  @type transition_ret :: {:next_state, State.name(), State.t()} | {:keep_state, State.t()}
+  @type transition :: ({trans, params}, State.t() -> transition_ret)
 
   # defmacro __using__(opts) do
   #   handler = __CALLER__.module
