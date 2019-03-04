@@ -1,6 +1,6 @@
 # EctoFsm
 
-**TODO: Add description**
+Provides a DSL for describing Ecto schema workflows as FSM.
 
 ## Installation
 
@@ -18,4 +18,3 @@ end
 Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
 and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
 be found at [https://hexdocs.pm/ecto_fsm](https://hexdocs.pm/ecto_fsm).
-
