@@ -8,7 +8,7 @@ defmodule Ecto.FSM.Notation do
   * `fsm() :: Ecto.FSM.specs()`
   * `docs() :: Ecto.FSM.docs()`
 
-  Example:
+  Examples:
 
       iex> defmodule Elixir.Door do
       ...>   use Ecto.FSM.Notation
@@ -42,6 +42,11 @@ defmodule Ecto.FSM.Notation do
       ...>   transition opened({:else, _}, s) do
       ...>     {:next_state, :opened, s}
       ...>   end
+      ...>
+      ...>   @doc "Force the door"
+      ...>   bypass force(_, s) do
+      ...>     {:next_state, :destroyed, s}
+      ...>   end
       ...> end
       ...> Door.fsm()
       %{
@@ -49,14 +54,15 @@ defmodule Ecto.FSM.Notation do
         {:closed, :open} => {Door, [:opened]}, {:opened, :close} => {Door, [:closed]},
         {:opened, :else} => {Door, [:opened]}, {:opened, :open} => {Door, [:opened]}
       }
-      iex> Door.docs()
+      ...> Door.docs()
       %{
         {:transition_doc, :closed, :close} => "Close to close",
         {:transition_doc, :closed, :else} => nil,
         {:transition_doc, :closed, :open} => "Close to open",
         {:transition_doc, :opened, :close} => "Open to close",
         {:transition_doc, :opened, :else} => nil,
-        {:transition_doc, :opened, :open} => "Open to open"
+        {:transition_doc, :opened, :open} => "Open to open",
+        {:event_doc, :force} => "Force the door"
       }
   """
 
