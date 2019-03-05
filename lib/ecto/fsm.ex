@@ -225,10 +225,10 @@ defmodule Ecto.FSM do
         cs
 
       {:error, :illegal_action} ->
-        Changeset.put_change(cs, Schema.State.field(cs), "illegal action: #{action}")
+        Changeset.add_error(cs, Schema.State.field(cs), "illegal action: #{action}")
 
       {:error, err} ->
-        Changeset.put_change(cs, Schema.State.field(cs), inspect(err))
+        Changeset.add_error(cs, Schema.State.field(cs), inspect(err))
     end
   end
 
