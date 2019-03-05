@@ -30,6 +30,7 @@ defmodule Ecto.FSM.Schema do
           m
       end
 
+    states_type = Module.get_attribute(states_schema, :states_type)
     states_field = Module.get_attribute(states_schema, :states_field)
 
     quote do
@@ -46,6 +47,10 @@ defmodule Ecto.FSM.Schema do
         |> Changeset.change()
         |> Changeset.put_change(unquote(states_field), name)
       end
+
+      def states_type, do: unquote(states_type)
+
+      def states_field, do: unquote(states_field)
 
       defimpl Ecto.FSM.Machine.State do
         def handlers(_), do: [unquote(states_handler)]
@@ -86,6 +91,7 @@ defmodule Ecto.FSM.Schema do
       |> Enum.join("_")
 
     quote do
+      @states_type unquote(states_type)
       @states_field unquote(states_field)
       @states_handler unquote(handler)
 

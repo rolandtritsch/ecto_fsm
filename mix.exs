@@ -39,6 +39,7 @@ defmodule EctoFsm.MixProject do
       {:excoveralls, "~> 0.10", only: :test, runtime: false},
       # All envs
       {:ecto, "~> 3.0"},
+      {:ecto_sql, "~> 3.0"},
       {:ecto_enum, "~> 1.2"}
     ]
   end
@@ -68,12 +69,13 @@ defmodule EctoFsm.MixProject do
     based FSM
     """
 
-  defp package, do: [
-    maintainers: ["Jean Parpaillon"],
-    licenses: ["Apache 2.0"],
-    links: %{
-      "GitHub" => "https://github.com/tableturn/ecto_fsm",
-      "Doc" => "http://hexdocs.pm/ecto_fsm"
-    }
-  ]
+  defp package,
+    do: [
+      maintainers: ["Jean Parpaillon"],
+      licenses: ["Apache 2.0"],
+      links: %{
+        "GitHub" => "https://github.com/tableturn/ecto_fsm",
+        "Doc" => "http://hexdocs.pm/ecto_fsm"
+      }
+    ]
 end
