@@ -11,7 +11,9 @@ defmodule EctoFsm.MixProject do
       source_url: "https://github.com/tableturn/ecto_fsm",
       source_url: "https://github.com/tableturn/ecto_fsm",
       dialyzer: dialyzer(System.get_env("MIX_CACHE_PLT")),
-      docs: [],
+      docs: docs(),
+      description: description(),
+      package: package(),
       consolidate_protocols: Mix.env() != :test,
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: cli_env_for(:test, ~w(
@@ -52,4 +54,26 @@ defmodule EctoFsm.MixProject do
     ]
 
   defp dialyzer(_), do: [plt_add_deps: :project]
+
+  defp docs,
+    do: [
+      main: "Ecto.FSM",
+      source_url: "https://github.com/tableturn/ecto_fsm",
+      source_ref: "master"
+    ]
+
+  defp description,
+    do: """
+    Provides DSL and functions for defining and handling `Ecto.Schema`
+    based FSM
+    """
+
+  defp package, do: [
+    maintainers: ["Jean Parpaillon"],
+    licenses: ["Apache 2.0"],
+    links: %{
+      "GitHub" => "https://github.com/tableturn/ecto_fsm",
+      "Doc" => "http://hexdocs.pm/ecto_fsm"
+    }
+  ]
 end
