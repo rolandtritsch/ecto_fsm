@@ -1,8 +1,8 @@
 defmodule Locker do
-  # Implements pin code locker (code: 1234)
-  use Ecto.FSM.Notation
-
-  defstruct status: :locked
+  @moduledoc """
+  Implements pin code locker (code: 1234)
+  """
+  use Ecto.FSM
 
   @doc "Valid input: 1"
   transition locked({:one, _}, s) do
@@ -52,13 +52,5 @@ defmodule Locker do
   @doc "Reset locker"
   bypass c(_, s) do
     {:next_state, :locked, s}
-  end
-
-  defimpl Ecto.FSM.Machine.State do
-    def handlers(_s), do: [Locker]
-
-    def state_name(s), do: s.status
-
-    def set_state_name(s, name), do: %{s | status: name}
   end
 end

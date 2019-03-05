@@ -2,11 +2,72 @@ defmodule Ecto.FSM do
   @moduledoc """
   Handle Ecto structures status through FSM
 
-  Defines FSM with `Ecto.FSM.Notation` macros.
+  Provides macros for defining FSM
+
+  Defines FSM with `transition/2` and `bypass/2` macros.
 
   Caller module is added the following functions:
-  * `handle_action(Ecto.Schema.t() | Ecto.Changeset.t(), Ecto.FSM.action(), params :: term) :: {:ok, Ecto.Schema.t() | Ecto.Changeset.t()} | {:error, term}`
-  * `handle_action!(Ecto.Schema.t() | Ecto.Changeset.t(), Ecto.FSM.action(), params :: term) :: Ecto.Schema.t() | Ecto.Changeset.t()`
+  * `fsm() :: Ecto.FSM.specs()`
+  * `docs() :: Ecto.FSM.docs()`
+
+  Transition functions must return `Ecto.FSM.transition_ret`.
+
+  Examples:
+
+      iex> defmodule Elixir.Door do
+      ...>   use Ecto.FSM
+      ...> 
+      ...>   @doc "Close to open"
+      ...>   @to [:opened]
+      ...>   transition closed({:open, _}, s) do
+      ...>     {:next_state, :opened, s}
+      ...>   end
+      ...> 
+      ...>   @doc "Close to close"
+      ...>   transition closed({:close, _}, s) do
+      ...>     {:next_state, :closed, s}
+      ...>   end
+      ...> 
+      ...>   transition closed({:else, _}, s) do
+      ...>     {:next_state, :closed, s}
+      ...>   end
+      ...> 
+      ...>   @doc "Open to open"
+      ...>   transition opened({:open, _}, s) do
+      ...>     {:next_state, :opened, s}
+      ...>   end
+      ...> 
+      ...>   @doc "Open to close"
+      ...>   @to [:closed]
+      ...>   transition opened({:close, _}, s) do
+      ...>     {:next_state, :closed, s}
+      ...>   end
+      ...> 
+      ...>   transition opened({:else, _}, s) do
+      ...>     {:next_state, :opened, s}
+      ...>   end
+      ...>
+      ...>   @doc "Force the door"
+      ...>   bypass force(_, s) do
+      ...>     {:next_state, :destroyed, s}
+      ...>   end
+      ...> end
+      ...> Door.fsm()
+      %{
+        {:closed, :close} => {Door, [:closed]}, {:closed, :else} => {Door, [:closed]},
+        {:closed, :open} => {Door, [:opened]}, {:opened, :close} => {Door, [:closed]},
+        {:opened, :else} => {Door, [:opened]}, {:opened, :open} => {Door, [:opened]}
+      }
+      ...> Door.docs()
+      %{
+        {:transition_doc, :closed, :close} => "Close to close",
+        {:transition_doc, :closed, :else} => nil,
+        {:transition_doc, :closed, :open} => "Close to open",
+        {:transition_doc, :opened, :close} => "Open to close",
+        {:transition_doc, :opened, :else} => nil,
+        {:transition_doc, :opened, :open} => "Open to open",
+        {:event_doc, :force} => "Force the door"
+      }
   """
   alias Ecto.FSM.State
 
@@ -26,6 +87,138 @@ defmodule Ecto.FSM do
 
   @type transition_ret :: {:next_state, State.name(), State.t()} | {:keep_state, State.t()}
   @type transition :: ({trans, params}, State.t() -> transition_ret)
+
+  defmacro __using__(_opts) do
+    quote do
+      import Ecto.FSM
+
+      @fsm %{}
+      @bypasses %{}
+      @docs %{}
+      @to nil
+      @__states_names__ []
+
+      @before_compile Ecto.FSM
+    end
+  end
+
+  defmacro __before_compile__(_env) do
+    quote do
+      @doc """
+      Returns this handler's FSM as `spec()`
+      """
+      @spec fsm() :: Ecto.FSM.specs()
+      def fsm, do: @fsm
+
+      @doc """
+      Returns this handler's FSM bypasses as `spec()`
+      """
+      @spec event_bypasses() :: Ecto.FSM.bypasses()
+      def event_bypasses, do: @bypasses
+
+      @doc """
+      Returns this FSM's doc map
+      """
+      @spec docs() :: Ecto.FSM.docs()
+      def docs, do: @docs
+
+      @doc """
+      Returns this FSM's states names
+      """
+      @spec states_names() :: [Ecto.State.name()]
+      def states_names, do: @__states_names__
+    end
+  end
+
+  @doc """
+  Define a function of type `transition` describing a state and its
+  transition. The function name is the state name, the transition is the
+  first argument. A state object can be modified and is the second argument.
+
+  ```
+  deftrans opened({:close_door, _params}, state) do
+    {:next_state, :closed, state}
+  end
+  ```
+  """
+  defmacro transition({state, _meta, [{trans, _params} | _rest]} = signature, body_block) do
+    do_block = Keyword.get(body_block, :do)
+
+    transition =
+      case trans do
+        {:_, _, _} -> :_
+        t when is_atom(t) -> t
+      end
+
+    next_states =
+      do_block
+      |> find_nextstates(state)
+      |> Enum.uniq()
+
+    quote do
+      state_name = unquote(state)
+      trans = unquote(transition)
+      next_states = @to || unquote(next_states)
+
+      @fsm Map.put(@fsm, {state_name, trans}, {__MODULE__, next_states})
+      @__states_names__ [state_name | @__states_names__] |> Enum.uniq()
+
+      doc =
+        __MODULE__
+        |> Module.get_attribute(:doc)
+        |> case do
+          nil -> nil
+          {_line, doc} -> doc
+          doc when is_binary(doc) -> doc
+        end
+
+      @docs Map.put(@docs, {:transition_doc, state_name, trans}, doc)
+      def unquote(signature), do: unquote(do_block)
+      @to nil
+    end
+  end
+
+  @doc """
+  Define a function of type `bypass`, ie which can be applied on any state
+  """
+  defmacro bypass({trans, _meta, _args} = signature, body_block) do
+    quote do
+      @bypasses Map.put(@bypasses, unquote(trans), __MODULE__)
+      doc =
+        __MODULE__
+        |> Module.get_attribute(:doc)
+        |> case do
+          nil -> nil
+          {_line, doc} -> doc
+          doc when is_binary(doc) -> doc
+        end
+
+      @docs Map.put(@docs, {:event_doc, unquote(trans)}, doc)
+      def unquote(signature), do: unquote(body_block[:do])
+    end
+  end
+
+  ###
+  ### Priv
+  ###
+  defp find_nextstates({:keep_state, _state_ast}, state_name),
+    do: [state_name]
+
+  defp find_nextstates({:{}, _, [:next_state, state_name, _state_ast]}, _)
+       when is_atom(state_name),
+       do: [state_name]
+
+  defp find_nextstates({_, _, asts}, state_name),
+    do: find_nextstates(asts, state_name)
+
+  defp find_nextstates({_, asts}, state_name),
+    do: find_nextstates(asts, state_name)
+
+  defp find_nextstates(asts, state_name) when is_list(asts),
+    do: Enum.flat_map(asts, fn ast -> find_nextstates(ast, state_name) end)
+
+  defp find_nextstates(_, _),
+    do: []
 
   # defmacro __using__(opts) do
   #   handler = __CALLER__.module

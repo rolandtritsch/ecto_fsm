@@ -3,6 +3,7 @@ defmodule Ecto.FSM.MachineTest do
 
   require Locker
 
+  alias Ecto.Changeset
   alias Ecto.FSM.Machine
 
   doctest Ecto.FSM.Machine
@@ -88,11 +89,15 @@ defmodule Ecto.FSM.MachineTest do
     end
 
     test ".event/2", %{locker: s} do
-      assert match?({:next_state, %Locker{status: :one}}, Machine.event(s, {:one, nil}))
+      # State change
+      assert match?(
+               {:next_state, %Changeset{changes: %{status: :one}}},
+               Machine.event(s, {:one, nil})
+             )
     end
   end
 
   defp new_locker(_ctx) do
-    {:ok, locker: %Locker{}}
+    {:ok, locker: %Locker.Schema{status: :locked}}
   end
 end

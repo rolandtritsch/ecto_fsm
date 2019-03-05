@@ -36,7 +36,8 @@ defmodule EctoFsm.MixProject do
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:excoveralls, "~> 0.10", only: :test, runtime: false},
       # All envs
-      {:ecto, "~> 3.0"}
+      {:ecto, "~> 3.0"},
+      {:ecto_enum, "~> 1.2"}
     ]
   end
 
