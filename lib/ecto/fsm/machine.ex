@@ -200,6 +200,9 @@ defmodule Ecto.FSM.Machine do
       end
 
     case res do
+      {:keep_state, state} ->
+        {:ok, state}
+
       {:next_state, state_name, state} ->
         {:ok, State.set_state_name(state, state_name)}
 
