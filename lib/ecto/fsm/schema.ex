@@ -38,12 +38,7 @@ defmodule Ecto.FSM.Schema do
       def state_name(s) do
         s
         |> Changeset.change()
-        |> Changeset.fetch_field(unquote(states_field))
-        |> case do
-          {:data, v} -> v
-          {:changes, v} -> v
-          :error -> raise "Missing field: #{unquote(states_field)}"
-        end
+        |> Changeset.get_field(unquote(states_field))
       end
 
       def set_state_name(s, name) do
@@ -58,6 +53,10 @@ defmodule Ecto.FSM.Schema do
         def state_name(s), do: unquote(states_schema).state_name(s)
 
         def set_state_name(s, name), do: unquote(states_schema).set_state_name(s, name)
+      end
+
+      defimpl Ecto.FSM.Schema.State do
+        def field(_), do: unquote(states_field)
       end
     end
   end

@@ -12,10 +12,7 @@ defmodule Ecto.FSM.Machine do
   alias Ecto.FSM.Machine.State
 
   @type meta_event_error :: :illegal_action | term
-  @type meta_event_reply ::
-          {:next_state, State.name(), State.t()}
-          | {:keep_state, State.t()}
-          | {:error, meta_event_error}
+  @type meta_event_reply :: {:ok, State.t()} | {:error, meta_event_error}
 
   @doc """
   Returns `Ecto.FSM.specs()` built from all handlers
@@ -177,13 +174,10 @@ defmodule Ecto.FSM.Machine do
 
     case res do
       {:keep_state, state} ->
-        {:next_state, state}
-
-      {:next_state, state_name, state, timeout} ->
-        {:next_state, State.set_state_name(state, state_name), timeout}
+        {:ok, state}
 
       {:next_state, state_name, state} ->
-        {:next_state, State.set_state_name(state, state_name)}
+        {:ok, State.set_state_name(state, state_name)}
 
       {:error, _} = e ->
         e
@@ -206,11 +200,8 @@ defmodule Ecto.FSM.Machine do
       end
 
     case res do
-      {:next_state, state_name, state, timeout} when is_integer(timeout) ->
-        {:next_state, State.set_state_name(state, state_name), timeout}
-
       {:next_state, state_name, state} ->
-        {:next_state, State.set_state_name(state, state_name)}
+        {:ok, State.set_state_name(state, state_name)}
 
       {:error, _} = e ->
         e

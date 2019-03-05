@@ -25,19 +25,16 @@ end
 
 defimpl Ecto.FSM.Machine.State, for: Ecto.Changeset do
   alias Ecto.Changeset
+  alias Ecto.FSM.Machine
+  alias Ecto.FSM.Schema
 
-  def handlers(cs), do: [handler(cs)]
+  def handlers(%Changeset{data: data}), do: Machine.State.handlers(data)
 
-  def state_name(%Changeset{} = cs), do: Changeset.get_field(cs, status_field(cs))
-
-  def set_state_name(%Changeset{} = cs, name) when is_atom(name) do
-    Changeset.put_change(cs, status_field(cs), name)
+  def state_name(%Changeset{} = cs) do
+    Changeset.get_field(cs, Schema.State.field(cs))
   end
 
-  ###
-  ### Priv
-  ###  
-  defp handler(%Changeset{data: %{__struct__: handler}}), do: handler
-
-  defp status_field(cs), do: cs |> handler() |> apply(:status_field, [])
+  def set_state_name(%Changeset{} = cs, name) when is_atom(name) do
+    Changeset.put_change(cs, Schema.State.field(cs), name)
+  end
 end

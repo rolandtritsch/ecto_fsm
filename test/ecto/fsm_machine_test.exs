@@ -91,7 +91,7 @@ defmodule Ecto.FSM.MachineTest do
     test ".event/2", %{locker: s} do
       # State change
       assert match?(
-               {:next_state, %Changeset{changes: %{status: :one}}},
+               {:ok, %Changeset{changes: %{status: :one}}},
                Machine.event(s, {:one, nil})
              )
     end

@@ -69,7 +69,9 @@ defmodule Ecto.FSM do
         {:event_doc, :force} => "Force the door"
       }
   """
-  alias Ecto.FSM.State
+  alias Ecto.Changeset
+  alias Ecto.FSM.Machine
+  alias Ecto.FSM.Schema
 
   @type trans :: atom
   @type params :: term
@@ -90,7 +92,7 @@ defmodule Ecto.FSM do
 
   defmacro __using__(_opts) do
     quote do
-      import Ecto.FSM
+      import Ecto.FSM, only: [transition: 2, bypass: 2]
 
       @fsm %{}
       @bypasses %{}
@@ -198,9 +200,38 @@ defmodule Ecto.FSM do
     end
   end
 
+  @doc """
+  Executes action on a changeset with associated FSM
+  """
+  @spec action(Changeset.t(), trans, params) :: Changeset.t()
+  def action(%Changeset{} = cs, action, params) do
+    if Machine.action_available?(cs, action) do
+      do_action(cs, action, params)
+    else
+      Changeset.add_error(
+        cs,
+        Schema.State.field(cs),
+        "action not available in this state: #{action}"
+      )
+    end
+  end
+
   ###
   ### Priv
   ###
+  defp do_action(%Changeset{} = cs, action, params) do
+    case Machine.event(cs, {action, params}) do
+      {:ok, cs} ->
+        cs
+
+      {:error, :illegal_action} ->
+        Changeset.put_change(cs, Schema.State.field(cs), "illegal action: #{action}")
+
+      {:error, err} ->
+        Changeset.put_change(cs, Schema.State.field(cs), inspect(err))
+    end
+  end
+
   defp find_nextstates({:keep_state, _state_ast}, state_name),
     do: [state_name]
 
@@ -219,99 +250,4 @@ defmodule Ecto.FSM do
 
   defp find_nextstates(_, _),
     do: []
-
-  # defmacro __using__(opts) do
-  #   handler = __CALLER__.module
-
-  #   status =
-  #     opts
-  #     |> Keyword.get_lazy(:status, fn -> raise "Missing opt: :status" end)
-  #     |> case do
-  #       field when is_atom(field) -> field
-  #       _ -> raise ":status opt must be an Ecto.Schema field name"
-  #     end
-
-  #   quote do
-  #     alias Ecto.Changeset
-
-  #     def state_name(s), do: Map.get(s, unquote(status))
-
-  #     def set_state_name(s, name) do
-  #       s
-  #       |> Changeset.change()
-  #       |> Changeset.put_change(unquote(status), name)
-  #     end
-
-  #     def status_field, do: unquote(status)
-
-  #     def handle_action(struct, action, params \\ nil) do
-  #       if Ecto.FSM.Machine.action_available?(struct, action) do
-  #         do_action(struct, action, params)
-  #       else
-  #         cs =
-  #           struct
-  #           |> Changeset.change()
-  #           |> Changeset.add_error(:status, "action not available in this state: #{action}")
-
-  #         {:error, cs}
-  #       end
-  #     end
-
-  #     def handle_action!(struct, action, params \\ nil) do
-  #       struct
-  #       |> handle_action(action, params)
-  #       |> case do
-  #         {:error, %Changeset{} = cs} ->
-  #           cs
-
-  #         {:error, :internal_error} ->
-  #           raise "internal error"
-
-  #         {:ok, s} ->
-  #           s
-  #       end
-  #     end
-
-  #     defp do_action(state, action, params) do
-  #       case Ecto.FSM.Machine.event(state, {action, params}) do
-  #         {:next_state, %Changeset{changes: %{}} = cs} ->
-  #           {:ok, Changeset.apply_changes(cs)}
-
-  #         {:next_state, %Changeset{} = cs} ->
-  #           {:ok, cs}
-
-  #         {:next_state, %{__struct__: __MODULE__} = s} ->
-  #           {:ok, s}
-
-  #         {:next_state, %Changeset{changes: %{}} = cs, _timeout} ->
-  #           {:ok, Changeset.apply_changes(cs)}
-
-  #         {:next_state, %Changeset{} = cs, _timeout} ->
-  #           {:ok, cs}
-
-  #         {:next_state, %{__struct__: __MODULE__} = s, _timeout} ->
-  #           {:ok, s}
-
-  #         {:error, err} ->
-  #           cs =
-  #             state
-  #             |> Changeset.change()
-  #             |> Changeset.add_error(:action, "has failed: #{inspect(err)}")
-
-  #           {:error, cs}
-  #       end
-  #     rescue
-  #       ExFSM.Error ->
-  #         {:error, :internal_error}
-  #     end
-
-  #     defimpl ExFSM.Machine.State, for: unquote(handler) do
-  #       def handlers(_), do: [unquote(handler)]
-
-  #       def state_name(s), do: unquote(handler).state_name(s)
-
-  #       def set_state_name(s, name), do: unquote(handler).set_state_name(s, name)
-  #     end
-  #   end
-  # end
 end
