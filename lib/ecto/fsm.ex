@@ -143,13 +143,14 @@ defmodule Ecto.FSM do
   end
   ```
   """
-  defmacro transition({state, _meta, [{trans, _params} | _rest]} = signature, body_block) do
+  defmacro transition({state, _meta, [action, _data]} = signature, body_block) do
     do_block = Keyword.get(body_block, :do)
 
     transition =
-      case trans do
-        {:_, _, _} -> :_
-        t when is_atom(t) -> t
+      case action do
+        {:_, _, nil} -> :_
+        {{:_, _, _}, _params} -> :_
+        {t, _params} when is_atom(t) -> t
       end
 
     next_states =

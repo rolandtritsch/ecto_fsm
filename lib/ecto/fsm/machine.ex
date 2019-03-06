@@ -9,6 +9,8 @@ defmodule Ecto.FSM.Machine do
   * `Ecto.FSM.Machine.event/2` allows you to execute the correct
     handler from a state and action
   """
+  require Logger
+
   alias Ecto.FSM.Machine.State
 
   @type meta_event_error :: :illegal_action | term
@@ -164,15 +166,7 @@ defmodule Ecto.FSM.Machine do
   end
 
   defp do_apply_bypass(handler, state, action, params) do
-    res =
-      try do
-        apply(handler, action, [params, state])
-      rescue
-        FunctionClauseError ->
-          {:error, :illegal_action}
-      end
-
-    case res do
+    case apply(handler, action, [params, state]) do
       {:keep_state, state} ->
         {:ok, state}
 
@@ -191,15 +185,7 @@ defmodule Ecto.FSM.Machine do
   defp do_apply_event(handler, state, action, params) do
     orig = State.state_name(state)
 
-    res =
-      try do
-        apply(handler, orig, [{action, params}, state])
-      rescue
-        FunctionClauseError ->
-          {:error, :illegal_action}
-      end
-
-    case res do
+    case apply(handler, orig, [{action, params}, state]) do
       {:keep_state, state} ->
         {:ok, state}
 
