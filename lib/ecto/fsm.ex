@@ -84,6 +84,7 @@ defmodule Ecto.FSM do
 
   @type doc_key :: {:transition_doc, State.name(), trans} | {:event_doc, trans}
   @type doc :: String.t()
+
   @type docs :: %{doc_key => doc}
   @type info :: {:transition, doc} | {:bypass, doc}
 
@@ -205,6 +206,8 @@ defmodule Ecto.FSM do
   Executes action on a changeset with associated FSM
   """
   @spec action(Changeset.t(), trans, params) :: Changeset.t()
+  def action(%Changeset{valid?: false} = cs, _action, _params), do: cs
+
   def action(%Changeset{} = cs, action, params) do
     if Machine.action_available?(cs, action) do
       do_action(cs, action, params)
