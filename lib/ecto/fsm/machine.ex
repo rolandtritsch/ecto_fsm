@@ -11,6 +11,7 @@ defmodule Ecto.FSM.Machine do
   """
   require Logger
 
+  alias Ecto.Multi
   alias Ecto.FSM.Machine.State
 
   @type meta_event_error :: :illegal_action | term
@@ -166,38 +167,39 @@ defmodule Ecto.FSM.Machine do
   end
 
   defp do_apply_bypass(handler, state, action, params) do
-    case apply(handler, action, [params, state]) do
-      {:keep_state, state} ->
-        {:ok, state}
-
-      {:next_state, state_name, state} ->
-        {:ok, State.set_state_name(state, state_name)}
-
-      {:error, _} = e ->
-        e
-
-      _other ->
-        orig = State.state_name(state)
-        raise Ecto.FSM.Error, handler: handler, statename: orig, action: action
-    end
+    handler
+    |> apply(action, [params, state])
+    |> do_event_result(handler, state, action)
   end
 
   defp do_apply_event(handler, state, action, params) do
     orig = State.state_name(state)
 
-    case apply(handler, orig, [{action, params}, state]) do
-      {:keep_state, state} ->
-        {:ok, state}
+    handler
+    |> apply(orig, [{action, params}, state])
+    |> do_event_result(handler, state, action)
+  end
 
-      {:next_state, state_name, state} ->
-        {:ok, State.set_state_name(state, state_name)}
+  defp do_event_result({:keep_state, state}, _, _, _), do: {:ok, state}
 
-      {:error, _} = e ->
-        e
+  defp do_event_result({:next_state, state_name, %Multi{} = state}, _, input_state, _) do
+    state =
+      Multi.new()
+      |> Multi.run(:__fsm_input__, fn _ -> input_state end)
+      |> Multi.append(State.set_state_name(state, state_name))
 
-      _other ->
-        raise Ecto.FSM.Error, handler: handler, statename: orig, action: action
-    end
+    {:ok, state}
+  end
+
+  defp do_event_result({:next_state, state_name, state}, _, _, _) do
+    {:ok, State.set_state_name(state, state_name)}
+  end
+
+  defp do_event_result({:error, _} = e, _, _, _), do: e
+
+  defp do_event_result(_other, handler, state, action) do
+    orig = State.state_name(state)
+    raise Ecto.FSM.Error, handler: handler, statename: orig, action: action
   end
 
   defp find_bypass_info(docs, action) do

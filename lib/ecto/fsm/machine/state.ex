@@ -38,3 +38,28 @@ defimpl Ecto.FSM.Machine.State, for: Ecto.Changeset do
     Changeset.put_change(cs, Schema.State.field(cs), name)
   end
 end
+
+defimpl Ecto.FSM.Machine.State, for: Ecto.Multi do
+  alias Ecto.Multi
+  alias Ecto.FSM.Machine
+
+  def handlers(%Multi{} = multi) do
+    multi
+    |> Multi.to_list()
+    |> Keyword.get(:__fsm_input__)
+    |> Machine.State.handlers()
+  end
+
+  def state_name(%Multi{} = multi) do
+    multi
+    |> Multi.to_list()
+    |> Keyword.get(:__fsm_input__)
+    |> Machine.State.state_name()
+  end
+
+  def set_state_name(%Multi{} = multi, name) when is_atom(name) do
+    Multi.update(multi, :__fsm_state__, fn %{__fsm_input__: input} ->
+      Machine.State.set_state_name(input, name)
+    end)
+  end
+end

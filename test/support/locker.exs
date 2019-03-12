@@ -4,6 +4,8 @@ defmodule Locker do
   """
   use Ecto.FSM
 
+  alias Ecto.Multi
+
   @doc "Valid input: 1"
   transition locked({:one, _}, s) do
     {:next_state, :one, s}
@@ -47,6 +49,24 @@ defmodule Locker do
   @doc "Lock"
   transition unlocked({:lock, _}, s) do
     {:next_state, :locked, s}
+  end
+
+  @doc "keep_state and returns `Ecto.Multi` as state"
+  transition unlocked({:keep_multi, args}, s) do
+    multi =
+      Multi.new()
+      |> Multi.run(:op, fn _ -> {:ok, {s, args}} end)
+
+    {:keep_state, multi}
+  end
+
+  @doc "next_state and returns `Ecto.Multi` as state"
+  transition unlocked({:next_multi, args}, s) do
+    multi =
+      Multi.new()
+      |> Multi.run(:op, fn _ -> {:ok, {s, args}} end)
+
+    {:next_state, :locked, multi}
   end
 
   @doc "Reset locker"

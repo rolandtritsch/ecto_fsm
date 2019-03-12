@@ -54,7 +54,10 @@ defmodule Ecto.FSM.MachineTest do
                  {:transition_doc, :three, :_} => "Invalid input: :locked",
                  {:transition_doc, :three, :four} => "Valid input: 1,2,3,4",
                  {:transition_doc, :two, :_} => "Invalid input: :locked",
-                 {:transition_doc, :two, :three} => "Valid input: 1,2,3"
+                 {:transition_doc, :two, :three} => "Valid input: 1,2,3",
+                 {:transition_doc, :unlocked, :keep_multi} => _,
+                 {:transition_doc, :unlocked, :lock} => _,
+                 {:transition_doc, :unlocked, :next_multi} => _
                },
                Machine.infos(s, :two)
              )
@@ -69,7 +72,10 @@ defmodule Ecto.FSM.MachineTest do
     test ".available_actions/1", %{locker: s} do
       assert match?([:_, :one, :c], Machine.available_actions(s))
 
-      assert match?([:lock, :c], Machine.available_actions(%{s | status: :unlocked}))
+      assert match?(
+               [:keep_multi, :lock, :next_multi, :c],
+               Machine.available_actions(%{s | status: :unlocked})
+             )
     end
 
     test ".action_available?/2", %{locker: s} do
