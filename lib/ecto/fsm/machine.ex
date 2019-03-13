@@ -185,7 +185,7 @@ defmodule Ecto.FSM.Machine do
   defp do_event_result({:next_state, state_name, %Multi{} = state}, _, input_state, _) do
     state =
       Multi.new()
-      |> Multi.run(:__fsm_input__, fn _ -> input_state end)
+      |> Multi.run(:__fsm_input__, fn _repo, _changes -> input_state end)
       |> Multi.append(State.set_state_name(state, state_name))
 
     {:ok, state}
