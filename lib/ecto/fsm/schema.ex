@@ -15,9 +15,9 @@ defmodule Ecto.FSM.Schema do
   defmacro __before_compile__(env) do
     states_schema = env.module
 
-    states_handler =
+    states_handlers =
       states_schema
-      |> Module.get_attribute(:states_handler)
+      |> Module.get_attribute(:states_handlers)
       |> case do
         nil ->
           raise """
@@ -26,8 +26,8 @@ defmodule Ecto.FSM.Schema do
           You can add one with `Ecto.FSM.Schema.status/{1,2}`.
           """
 
-        m ->
-          m
+        l ->
+          l
       end
 
     states_type = Module.get_attribute(states_schema, :states_type)
@@ -53,7 +53,7 @@ defmodule Ecto.FSM.Schema do
       def states_field, do: unquote(states_field)
 
       defimpl Ecto.FSM.Machine.State do
-        def handlers(_), do: [unquote(states_handler)]
+        def handlers(_), do: unquote(states_handlers)
 
         def state_name(s), do: unquote(states_schema).state_name(s)
 
@@ -75,7 +75,9 @@ defmodule Ecto.FSM.Schema do
   * `:type` - module name for the enumeration type (use `EctoEnum`)
   * `:default` - default value for status field
   """
-  defmacro status(handler, opts \\ []) do
+  defmacro status(handlers, opts \\ []) do
+    handlers = List.wrap(handlers)
+
     opts =
       [name: :status, type: Module.concat(__CALLER__.module, "Status"), default: nil]
       |> Keyword.merge(opts)
@@ -93,12 +95,15 @@ defmodule Ecto.FSM.Schema do
     quote do
       @states_type unquote(states_type)
       @states_field unquote(states_field)
-      @states_handler unquote(handler)
+      @states_handlers unquote(handlers)
 
-      require unquote(handler)
       require EctoEnum
+      Ecto.FSM.Schema.__requires__(unquote(handlers))
 
-      states_names = @states_handler.states_names()
+      states_names =
+        @states_handlers
+        |> Enum.reduce([], fn handler, acc -> handler.states_names() ++ acc end)
+
       EctoEnum.defenum(unquote(states_type), unquote(states_type_name), states_names)
 
       field_opts =
@@ -108,6 +113,19 @@ defmodule Ecto.FSM.Schema do
         end
 
       Ecto.Schema.__field__(__MODULE__, @states_field, unquote(states_type), field_opts)
+    end
+  end
+
+  @doc false
+  defmacro __requires__(handlers) do
+    handlers
+    |> Enum.map(&__require__/1)
+  end
+
+  @doc false
+  def __require__(handler) do
+    quote do
+      require unquote(handler)
     end
   end
 end
