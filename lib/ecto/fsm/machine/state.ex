@@ -57,8 +57,9 @@ defimpl Ecto.FSM.Machine.State, for: Ecto.Multi do
     |> Machine.State.state_name()
   end
 
-  def set_state_name(%Multi{} = multi, name) when is_atom(name) do
-    Multi.update(multi, :__fsm_state__, fn %{__fsm_input__: input} ->
+  def set_state_name(%Multi{}, name) when is_atom(name) do
+    Multi.new()
+    |> Multi.update(:__fsm_state__, fn %{__fsm_input__: input} ->
       Machine.State.set_state_name(input, name)
     end)
   end

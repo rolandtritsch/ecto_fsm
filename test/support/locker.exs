@@ -55,7 +55,7 @@ defmodule Locker do
   transition unlocked({:keep_multi, args}, s) do
     multi =
       Multi.new()
-      |> Multi.run(:op, fn _ -> {:ok, {s, args}} end)
+      |> Multi.run(:op, fn _repo, _changes -> {:ok, {s, args}} end)
 
     {:keep_state, multi}
   end
@@ -64,7 +64,7 @@ defmodule Locker do
   transition unlocked({:next_multi, args}, s) do
     multi =
       Multi.new()
-      |> Multi.run(:op, fn _ -> {:ok, {s, args}} end)
+      |> Multi.run(:op, fn _repo, _changes -> {:ok, {s, args}} end)
 
     {:next_state, :locked, multi}
   end

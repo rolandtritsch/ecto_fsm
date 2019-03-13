@@ -2,9 +2,10 @@ defmodule Ecto.FSM.SchemaTest do
   use ExUnit.Case
 
   alias Ecto.Changeset
+  alias Ecto.Multi
   alias Ecto.FSM
 
-  doctest Ecto.FSM.SchemaTest
+  doctest Ecto.FSM.Schema
 
   describe ".action/3" do
     setup :new_locker
@@ -22,30 +23,31 @@ defmodule Ecto.FSM.SchemaTest do
       res =
         s
         |> Changeset.change()
+        |> FSM.action(:one, nil)
+        |> FSM.action(:two, nil)
+        |> FSM.action(:three, nil)
+        |> FSM.action(:four, nil)
         |> FSM.action(:keep_multi, :myarg)
 
-      assert match?(%Multi{}, res)
-
-      _state_changeset =
-        res
-        |> Multi.to_list()
-        |> Keyword.get(:__fsm_state__)
-        |> IO.inspect(label: "STATE_CS")
+      assert match?(%Multi{operations: [op: _]}, res)
     end
 
     test "returns multi (next_state)", %{locker: s} do
       res =
         s
         |> Changeset.change()
+        |> FSM.action(:one, nil)
+        |> FSM.action(:two, nil)
+        |> FSM.action(:three, nil)
+        |> FSM.action(:four, nil)
         |> FSM.action(:next_multi, :myarg)
 
       assert match?(%Multi{}, res)
 
-      _state_changeset =
-        res
-        |> Multi.to_list()
-        |> Keyword.get(:__fsm_state__)
-        |> IO.inspect(label: "STATE_CS")
+      assert match?(
+               [:__fsm_input__, :op, :__fsm_state__],
+               res |> Multi.to_list() |> Keyword.keys()
+             )
     end
   end
 
