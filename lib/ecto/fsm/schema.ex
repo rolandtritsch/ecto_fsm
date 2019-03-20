@@ -103,6 +103,7 @@ defmodule Ecto.FSM.Schema do
       states_names =
         @states_handlers
         |> Enum.reduce([], fn handler, acc -> handler.states_names() ++ acc end)
+        |> Enum.uniq()
 
       EctoEnum.defenum(unquote(states_type), unquote(states_type_name), states_names)
 
