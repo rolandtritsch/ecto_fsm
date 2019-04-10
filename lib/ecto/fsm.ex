@@ -218,7 +218,7 @@ defmodule Ecto.FSM do
       Changeset.add_error(
         cs,
         Schema.State.field(cs),
-        "action not available in this state: #{action}"
+        "action '#{action}' not available from state '#{Machine.State.state_name(cs)}'"
       )
     end
   end
