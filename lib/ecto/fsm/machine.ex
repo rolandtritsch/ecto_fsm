@@ -59,7 +59,7 @@ defmodule Ecto.FSM.Machine do
   @doc """
   Returns info for particular transition
   """
-  @spec find_info(Ecto.FSM.state(), Ecto.FSM.trans()) :: Ecto.FSM.info() | nil
+  @spec find_info(Ecto.FSM.State.t(), Ecto.FSM.trans()) :: Ecto.FSM.info() | nil
   def find_info(state, trans) do
     docs = infos(state, trans)
 

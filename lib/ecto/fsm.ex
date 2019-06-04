@@ -73,6 +73,7 @@ defmodule Ecto.FSM do
   alias Ecto.Multi
   alias Ecto.FSM.Machine
   alias Ecto.FSM.Schema
+  alias Ecto.FSM.State
 
   @type trans :: atom
   @type params :: term
@@ -129,7 +130,7 @@ defmodule Ecto.FSM do
       @doc """
       Returns this FSM's states names
       """
-      @spec states_names() :: [Ecto.State.name()]
+      @spec states_names() :: [Ecto.FSM.State.name()]
       def states_names, do: @__states_names__
     end
   end
