@@ -34,7 +34,7 @@ defmodule EctoFsm.MixProject do
     [
       # Dev / test deps
       {:credo, "~> 0.10", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 0.5", only: :dev},
+      {:dialyxir, "~> 1.0.0-rc.6", only: :dev},
       {:ex_doc, ">= 0.0.0", only: :dev, runtime: false},
       {:excoveralls, "~> 0.10", only: :test, runtime: false},
       # All envs
@@ -48,13 +48,20 @@ defmodule EctoFsm.MixProject do
     do: Enum.reduce(tasks, [], &Keyword.put(&2, :"#{&1}", env))
 
   defp dialyzer("true"),
-    do: [
-      plt_core_path: "/plts",
-      plt_file: {:no_warn, "/plts/ttapi_#{Mix.env()}.plt"},
-      plt_add_deps: :project
-    ]
+    do:
+      dialyzer_common() ++
+        [
+          plt_core_path: "/plts",
+          plt_file: {:no_warn, "/plts/ttapi_#{Mix.env()}.plt"}
+        ]
 
-  defp dialyzer(_), do: [plt_add_deps: :project]
+  defp dialyzer(_), do: dialyzer_common()
+
+  defp dialyzer_common,
+    do: [
+      plt_add_deps: :project,
+      ignore_warnings: ".dialyzer-ignore.exs"
+    ]
 
   defp docs,
     do: [
