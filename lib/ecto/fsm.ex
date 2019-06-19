@@ -85,7 +85,7 @@ defmodule Ecto.FSM do
   @type bypasses :: %{trans => handler}
 
   @type doc_key :: {:transition_doc, State.name(), trans} | {:event_doc, trans}
-  @type doc :: String.t()
+  @type doc :: String.t() | nil
 
   @type docs :: %{doc_key => doc}
   @type info :: {:transition, doc} | {:bypass, doc}
@@ -112,25 +112,21 @@ defmodule Ecto.FSM do
       @doc """
       Returns this handler's FSM as `spec()`
       """
-      @spec fsm() :: Ecto.FSM.specs()
       def fsm, do: @fsm
 
       @doc """
       Returns this handler's FSM bypasses as `spec()`
       """
-      @spec event_bypasses() :: Ecto.FSM.bypasses()
       def event_bypasses, do: @bypasses
 
       @doc """
       Returns this FSM's doc map
       """
-      @spec docs() :: Ecto.FSM.docs()
       def docs, do: @docs
 
       @doc """
       Returns this FSM's states names
       """
-      @spec states_names() :: [Ecto.FSM.State.name()]
       def states_names, do: @__states_names__
     end
   end
