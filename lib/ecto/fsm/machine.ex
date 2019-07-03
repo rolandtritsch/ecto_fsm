@@ -157,12 +157,18 @@ defmodule Ecto.FSM.Machine do
   end
 
   defp do_find_handler({state_name, trans}, handlers) when is_list(handlers) do
-    handlers
-    |> do_fsm()
+    fsm = do_fsm(handlers)
+
+    fsm
     |> Map.get({state_name, trans})
     |> case do
-      {handler, _} -> handler
-      _ -> nil
+      {handler, _} ->
+        handler
+
+      _ ->
+        fsm
+        |> Map.get({state_name, :_}, {nil, nil})
+        |> elem(0)
     end
   end
 
