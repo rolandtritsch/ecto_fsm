@@ -11,7 +11,6 @@ defmodule Ecto.FSM.Machine do
   """
   require Logger
 
-  alias Ecto.Multi
   alias Ecto.FSM.Machine.State
 
   @type meta_event_error :: :illegal_action | term
@@ -187,19 +186,6 @@ defmodule Ecto.FSM.Machine do
   end
 
   defp do_event_result({:keep_state, state}, _, _, _), do: {:ok, state}
-
-  defp do_event_result({:next_state, state_name, %Multi{} = state}, _, input_state, _) do
-    init_multi =
-      Multi.new()
-      |> Multi.run(:__fsm_input__, fn _repo, _changes -> {:ok, input_state} end)
-
-    state =
-      init_multi
-      |> Multi.append(state)
-      |> Multi.append(State.set_state_name(init_multi, state_name))
-
-    {:ok, state}
-  end
 
   defp do_event_result({:next_state, state_name, state}, _, _, _) do
     {:ok, State.set_state_name(state, state_name)}

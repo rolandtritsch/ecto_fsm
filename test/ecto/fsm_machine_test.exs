@@ -5,6 +5,7 @@ defmodule Ecto.FSM.MachineTest do
 
   alias Ecto.Changeset
   alias Ecto.FSM.Machine
+  alias Ecto.FSM.Machine.State
 
   doctest Ecto.FSM.Machine
 
@@ -35,6 +36,8 @@ defmodule Ecto.FSM.MachineTest do
 
     test ".find_handler/1", %{locker: s} do
       assert match?(Locker, Machine.find_handler({s, :one}))
+
+      s = State.set_state_name(s, :unlocked)
       assert match?(nil, Machine.find_handler({s, :non_existing_transition}))
     end
 
@@ -55,9 +58,7 @@ defmodule Ecto.FSM.MachineTest do
                  {:transition_doc, :three, :four} => "Valid input: 1,2,3,4",
                  {:transition_doc, :two, :_} => "Invalid input: :locked",
                  {:transition_doc, :two, :three} => "Valid input: 1,2,3",
-                 {:transition_doc, :unlocked, :keep_multi} => _,
-                 {:transition_doc, :unlocked, :lock} => _,
-                 {:transition_doc, :unlocked, :next_multi} => _
+                 {:transition_doc, :unlocked, :lock} => _
                },
                Machine.infos(s, :two)
              )
@@ -73,7 +74,7 @@ defmodule Ecto.FSM.MachineTest do
       assert match?([:_, :one, :c], Machine.available_actions(s))
 
       assert match?(
-               [:keep_multi, :lock, :next_multi, :c],
+               [:lock, :c],
                Machine.available_actions(%{s | status: :unlocked})
              )
     end

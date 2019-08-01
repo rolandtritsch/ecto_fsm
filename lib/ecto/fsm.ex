@@ -70,7 +70,6 @@ defmodule Ecto.FSM do
       }
   """
   alias Ecto.Changeset
-  alias Ecto.Multi
   alias Ecto.FSM.Machine
   alias Ecto.FSM.Schema
   alias Ecto.FSM.State
@@ -203,9 +202,9 @@ defmodule Ecto.FSM do
   @doc """
   Executes action on a changeset with associated FSM
 
-  Returns a Multi or function acceptable by `Ecto.transaction/2` callback
+  Returns function acceptable by `Ecto.transaction/2` callback
   """
-  @spec action(Changeset.t(), trans, params) :: Changeset.t() | Multi.t()
+  @spec action(Changeset.t(), trans, params) :: Changeset.t()
   def action(%Changeset{valid?: false} = cs, _action, _params), do: cs
 
   def action(%Changeset{} = cs, action, params) do
@@ -219,12 +218,6 @@ defmodule Ecto.FSM do
       )
     end
   end
-
-  @doc """
-  Returns new state from Multi changes returned by a transition
-  """
-  @spec state(changes :: map) :: State.t()
-  def state(%{__fsm_state__: state}), do: state
 
   ###
   ### Priv
