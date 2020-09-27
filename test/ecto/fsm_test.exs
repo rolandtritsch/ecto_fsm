@@ -96,7 +96,7 @@ defmodule Ecto.FSM.NotationTest do
           end
         end
       
-      assert match?([:s1, :s2, :s3], mod.states_names())
+      assert match?([:s1, :s2, :s3], mod.states_names() |> Enum.sort())
     end
   end
 end
